@@ -50,3 +50,17 @@ variable "redshift_node_type" {
   type        = string
   default     = "dc2.large"
 }
+
+## Alert email receiver
+variable "alert_email_id" {
+  description = "Email id to send alerts to "
+  type        = string
+  default     = "mstf2202@gmail.com"
+}
+
+## Your repository url
+variable "repo_url" {
+  description = "Repository url to clone into production machine"
+  type        = string
+  default     = "https://github.com/mustafaddogann/data_engineering_project.git"
+}
