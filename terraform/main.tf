@@ -27,7 +27,28 @@ resource "aws_s3_bucket" "sde-data-lake" {
 resource "aws_s3_bucket_acl" "sde-data-lake-acl" {
   bucket = aws_s3_bucket.sde-data-lake.id
   acl    = "public-read-write"
+  depends_on = [aws_s3_bucket_ownership_controls.s3_bucket_acl_ownership]
 }
+
+resource "aws_s3_bucket_ownership_controls" "s3_bucket_acl_ownership" {
+  bucket = aws_s3_bucket.sde-data-lake.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+  depends_on = [aws_s3_bucket_public_access_block.example]
+}
+
+
+resource "aws_s3_bucket_public_access_block" "example" {
+  bucket = aws_s3_bucket.sde-data-lake.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+
 
 # IAM role for EC2 to connect to AWS Redshift, S3, & EMR
 resource "aws_iam_role" "sde_ec2_iam_role" {
@@ -69,8 +90,18 @@ resource "aws_iam_role" "sde_redshift_iam_role" {
     ]
   })
 
-  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess", "arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess"]
-}
+  managed_policy_arns = [
+        "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+        "arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess", 
+        "arn:aws:iam::aws:policy/AWSGlueConsoleSageMakerNotebookFullAccess",
+        "arn:aws:iam::aws:policy/AWSGlueSchemaRegistryFullAccess",
+        "arn:aws:iam::aws:policy/AwsGlueDataBrewFullAccessPolicy",
+        "arn:aws:iam::aws:policy/AwsGlueSessionUserRestrictedNotebookPolicy",
+        "arn:aws:iam::aws:policy/AwsGlueSessionUserRestrictedPolicy",
+        "arn:aws:iam::aws:policy/service-role/AWSGlueDataBrewServiceRole",
+        "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole",
+        "arn:aws:iam::aws:policy/service-role/AmazonDataZoneGlueManageAccessRolePolicy"]
+        }
 
 # Create security group for access to EC2 from your Anywhere
 resource "aws_security_group" "sde_security_group" {
@@ -81,6 +112,20 @@ resource "aws_security_group" "sde_security_group" {
     description = "Inbound SCP"
     from_port   = 22
     to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "Inbound Redshift IPv4"
+    from_port   = 5439
+    to_port     = 5439
+    protocol    = "tcp"
+    cidr_blocks = ["3.210.146.213/32"]
+  }
+  ingress {
+    description = "Inbound Redshift IPv4"
+    from_port   = 5439
+    to_port     = 5439
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
